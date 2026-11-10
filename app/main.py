@@ -25,7 +25,8 @@ from app.tasks import TASKS
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    create_tables()
+    if get_settings().create_schema_on_startup:
+        create_tables()
     yield
 
 

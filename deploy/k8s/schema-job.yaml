@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jobs-schema
+  namespace: jobs
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: schema
+          image: job-platform:local
+          command: [python, -c, "import app.models; from app.database import create_tables; create_tables()"]
+          envFrom:
+            - secretRef:
+                name: jobs-secrets
+            - configMapRef:
+                name: jobs-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi

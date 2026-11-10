@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "distributed job processing platform"
     database_url: str = "postgresql+psycopg://jobs:jobs@localhost:5432/jobs"
     redis_url: str = "redis://localhost:6379/0"
+    create_schema_on_startup: bool = True
     worker_poll_seconds: float = 1.0
     worker_heartbeat_seconds: float = 5.0
     worker_heartbeat_ttl_seconds: int = 15

@@ -23,7 +23,8 @@ The API accepts jobs and stores their state in PostgreSQL while Redis handles de
 - Redis
 - PostgreSQL
 - SQLAlchemy
-- Docker Compose
+- Docker and Docker Compose
+- GKE on Google Cloud, with Terraform infrastructure and Kubernetes manifests
 - Pytest
 
 ## Run it
@@ -120,11 +121,11 @@ Redis ready queue -> worker -> result
                         +-> dead letter queue
 ```
 
-Workers claim a job and attach an expiring lease while it runs
+Workers claim a job and attach an expiring lease with a unique ownership token while it runs
 
 The lease is renewed in the background and another worker puts the job back on the ready queue if the lease expires
 
-Job completion checks the worker id before saving a result so a worker with an old lease cannot overwrite newer work
+Job completion checks the worker ID and lease ownership before saving a result. Renewals, acknowledgements, and retries compare the claim token so a stale worker cannot remove or extend a replacement worker's lease. Expired leases and delayed retries move to the ready queue atomically.
 
 ## Reliability choices
 
@@ -158,6 +159,35 @@ ruff check .
 ```
 
 The test suite uses SQLite and a fake Redis instance so it does not need Docker
+
+## GKE deployment
+
+`infra/terraform` provisions a GKE cluster, Artifact Registry, networking, and node
+permissions. `deploy/k8s` contains persistent PostgreSQL/Redis, API and worker
+Deployments, health probes, resource requests, and a schema initialization Job.
+`scripts/deploy-gke.sh` deploys a supplied image into an explicitly named context.
+
+Follow [the GKE deployment guide](docs/gke-deployment.md) to provision a project,
+build and push the Docker image, deploy, and test worker-crash recovery. The repo
+contains the deployment configuration; it does not claim a specific live cloud
+rollout has been performed or verified by these files.
+
+## Recovery tests and boundaries
+
+The suite covers abandoned work, stale workers, duplicate deliveries, competing
+lease recovery and retry promotion, retry exhaustion, cancellation during
+recovery, and recovery after a result was already committed. Each worker receives
+a fresh lease token for every claim.
+
+The default tests use SQLite and fakeredis. To run against disposable real
+PostgreSQL and Redis instances, set `JOBS_TEST_DATABASE_URL` and
+`JOBS_TEST_REDIS_URL` before running pytest. The fixtures create/drop the job
+tables and flush the selected Redis database, so use dedicated test databases.
+
+The database and queue are separate transactions. A transactional outbox or
+reconciler is needed for complete recovery from a crash between a database commit
+and its Redis enqueue/retry. The GKE example uses single-instance data stores and
+does not provide database high availability. See the deployment guide for details.
 
 ## API routes
 
