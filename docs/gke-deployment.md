@@ -90,7 +90,7 @@ In another terminal, submit a long task and note its returned ID:
 ```bash
 curl -sS http://localhost:8000/v1/jobs \
   -H 'Content-Type: application/json' -H 'Idempotency-Key: gke-recovery-1' \
-  -d '{"task_type":"sleep","payload":{"seconds":90},"max_attempts":3}'
+  -d '{"task_type":"sleep","payload":{"seconds":20},"max_attempts":3}'
 curl -sS http://localhost:8000/v1/workers
 ```
 
